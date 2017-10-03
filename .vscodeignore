@@ -2,3 +2,4 @@ src/**
 **/*.map
 .gitignore
 tsconfig.json
+image.gif
