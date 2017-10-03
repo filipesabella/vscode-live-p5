@@ -10,6 +10,7 @@
   "engines": {
     "vscode": "^1.11.0"
   },
+  "keywords": ["p5", "live", "auto-reload"],
   "categories": [
     "Other"
   ],
