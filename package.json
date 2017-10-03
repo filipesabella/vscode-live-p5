@@ -1,0 +1,50 @@
+{
+  "name": "live-p5",
+  "displayName": "live-p5",
+  "description": "Edit your p5 code live, without reloading",
+  "version": "1.0.0",
+  "author": {
+    "name": "filipesabella"
+  },
+  "publisher": "filipesabella",
+  "engines": {
+    "vscode": "^1.11.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:extension.live-p5"
+  ],
+  "main": "./out/src/extension",
+  "contributes": {
+    "commands": [{
+      "command": "extension.live-p5",
+      "title": "Open live p5 panel"
+    }]
+  },
+  "scripts": {
+    "vscode:prepublish": "node_modules/typescript/bin/tsc -p ./",
+    "compile": "node_modules/typescript/bin/tsc -watch -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "test": "node ./node_modules/vscode/bin/test"
+  },
+  "devDependencies": {
+    "typescript": "^2.5.2",
+    "@types/node": "^8.0.32",
+    "vscode": "^1.0.0"
+  },
+  "dependencies": {
+    "ws": "^3.2.0",
+    "recast": "^0.12.6"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/filipesabella/vscode-live-p5/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/filipesabella/vscode-live-p5.git"
+  },
+  "homepage": "https://github.com/filipesabella/vscode-live-p5/blob/master/README.md"
+}
