@@ -9,7 +9,7 @@ const AllVarsVariableName = '__AllVars';
 let previousCode = null;
 
 export function codeHasChanged(userCode: string): boolean {
-  return detectCodeChanges(recast.parse(userCode).program.body, previousCode.program.body);
+  return detectCodeChanges(astFromUserCode(userCode).program.body, previousCode.program.body);
 }
 
 /**
@@ -23,26 +23,32 @@ export function codeHasChanged(userCode: string): boolean {
  * let a = __AllVars['aHash'];
  */
 export function parseCode(userCode: string): string {
-  const vars = {};
-  const ast = recast.parse(userCode);
-  types.visit(ast, {
-    visitLiteral: (path) => {
-      const key = nodeToKey(path);
-      vars[key] = path.value.value;
+  try {
+    const vars = {};
+    const ast = astFromUserCode(userCode);
 
-      path.replace(
-        typeBuilders.memberExpression(
-          typeBuilders.identifier(AllVarsVariableName),
-          typeBuilders.identifier(key)));
+    types.visit(ast, {
+      visitLiteral: (path) => {
+        const key = nodeToKey(path, vars);
+        vars[key] = path.value.value;
 
-      return false;
-    }
-  });
+        path.replace(
+          typeBuilders.memberExpression(
+            typeBuilders.identifier(AllVarsVariableName),
+            typeBuilders.identifier(key)));
 
-  const modifiedUserCode = recast.prettyPrint(ast).code;
-  previousCode = recast.parse(userCode);
+        return false;
+      }
+    });
 
-  return `const ${AllVarsVariableName} = ${JSON.stringify(vars)}; ${modifiedUserCode}`;
+    const modifiedUserCode = recast.prettyPrint(ast).code;
+
+    previousCode = astFromUserCode(userCode);
+
+    return `const ${AllVarsVariableName} = ${JSON.stringify(vars)}; ${modifiedUserCode}`;
+  } catch (e) {
+    return parseCode(recast.prettyPrint(previousCode));
+  }
 }
 
 /**
@@ -56,10 +62,11 @@ export function parseCode(userCode: string): string {
  */
 export function getVars(userCode: string): any {
   const vars = {};
-  const ast = recast.parse(userCode);
+  const ast = astFromUserCode(userCode);
+
   types.visit(ast, {
     visitLiteral: (path) => {
-      const key = nodeToKey(path);
+      const key = nodeToKey(path, vars);
       vars[key] = path.value.value;
 
       return false;
@@ -70,37 +77,35 @@ export function getVars(userCode: string): any {
 }
 
 /**
- * Returns a uniquely identifiable key given an AST node.
+ * Returns the normalised ast ignoring user formatting.
  */
-function nodeToKey(path: any): string {
-  const parent = path.parentPath;
-
-  if (parent.value.type === 'VariableDeclarator') {
-    const line = parent.value.id.loc.start.line;
-    const varName = parent.value.id.name;
-    return keyFrom('line:' + line + ',varName:' + varName);
-  } else if (parent.name === 'arguments') {
-    const pathLoc = path.value.loc.start;
-    const allArguments = path.parentPath.value;
-    // tries to find the argument position in order to uniquely identify this path
-    let argPosition = -1;
-    for (let i = 0; i < allArguments.length; i++) {
-      if ((!allArguments[i].object || allArguments[i].object.name !== AllVarsVariableName) &&
-        allArguments[i].loc.start.line === pathLoc.line && allArguments[i].loc.start.column === pathLoc.column) {
-        argPosition = i;
-        break;
-      }
-    }
-    return keyFrom('value:' + path.raw + ',index:' + argPosition + ',line:' + pathLoc.line);
-  } else {
-    return keyFrom(JSON.stringify(path.value.loc.start));
-  }
+function astFromUserCode(userCode: string): any {
+  return recast.parse(recast.prettyPrint(recast.parse(userCode)).code);
 }
 
-function detectCodeChanges(actual, expected): boolean {
+/**
+ * Returns a uniquely identifiable key given an AST node.
+ */
+function nodeToKey(path: any, vars: any): string {
+  let key = 'a' + path.value.loc.start.line;
+  let count = 1;
+  while (key in vars) {
+    key = 'a' + path.value.loc.start.line + '_' + count++;
+  }
+
+  return key;
+}
+
+/**
+ * Here be dragons.
+ * Tries to detect recursively if one AST is different from another, ignoring
+ * literal value changes.
+ */
+function detectCodeChanges(actual: any, expected: any): boolean {
+  // this returns true when comparing base types (strings, numbers, booleans)
+  // we reach this case in many properties like an function's name.
   if (Object(actual) !== actual) {
-    // ignore differences in literals
-    return false;
+    return actual !== expected;
   }
 
   if (Array.isArray(actual)) {
@@ -115,29 +120,32 @@ function detectCodeChanges(actual, expected): boolean {
     return false;
   }
 
-  for (let attr in actual) {
-    if (expected && attr in expected) {
-      if (detectCodeChanges(actual[attr], expected[attr])) {
+  const actualIsLiteral = actual.type === 'Literal';
+  const expectedIsLiteral = expected.type === 'Literal';
+
+  if (actualIsLiteral && expectedIsLiteral) {
+    return false;
+  } else if (!actualIsLiteral && !expectedIsLiteral) {
+    for (let attr in actual) {
+      /**
+       * Sadly there's no other way to compare AST nodes without treating each type specifically,
+       * as there's no common interface.
+       *
+       * This code simply iterates through all object properties and compares them. `loc`, however
+       * is a property that nodes have that can differ between `actual` and `expected`, but we don't
+       * necessarily care for this change as it might just be a literal value changing.
+       */
+      if (expected && attr in expected) {
+        if (attr !== 'loc' && detectCodeChanges(actual[attr], expected[attr])) {
+          return true;
+        }
+      } else {
         return true;
       }
-    } else {
-      return true;
     }
+  } else {
+    return true;
   }
 
   return false;
 }
-
-function keyFrom(s: string): string {
-  return 'a' + Math.abs(hashCode(s));
-}
-
-function hashCode(s: string): number {
-  let hash = 0;
-  if (s.length === 0) return hash;
-  for (let i = 0; i < s.length; i++) {
-    hash = ((hash << 5) - hash) + s.charCodeAt(i);
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return hash;
-};

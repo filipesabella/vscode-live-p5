@@ -19,11 +19,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.workspace.onDidChangeTextDocument(e => {
       const text = vscode.window.activeTextEditor.document.getText();
-      if (parser.codeHasChanged(text)) {
-        provider.update(previewUri);
-      } else {
-        websocket.send(JSON.stringify(parser.getVars(text)));
-      }
+      try {
+        if (parser.codeHasChanged(text)) {
+          provider.update(previewUri);
+        } else {
+          websocket.send(JSON.stringify(parser.getVars(text)));
+        }
+      } catch (e) { }
     });
   });
 
@@ -38,6 +40,5 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {
-  console.log('hello');
   websocket.dispose();
 }
