@@ -38,18 +38,19 @@
     "test-watch": "mocha -w --compilers ts:ts-node/register test/**/*.test.ts"
   },
   "devDependencies": {
-    "@types/node": "^8.0.32",
-    "@types/mocha": "^2.2.41",
-    "@types/chai": "^3.5.2",
-    "typescript": "^2.5.2",
+    "@types/node": "^11.13.4",
+    "@types/mocha": "^5.2.6",
+    "@types/chai": "^4.1.7",
+    "typescript": "^3.4.3",
     "vscode": "^1.0.0",
-    "ts-node": "^3.0.2",
-    "chai": "^3.5.0",
-    "mocha": "^3.3.0"
+    "ts-node": "^8.0.3",
+    "chai": "^4.2.0",
+    "mocha": "^6.1.2"
   },
   "dependencies": {
-    "ws": "^3.2.0",
-    "recast": "^0.12.6"
+    "npm-check-updates": "^3.1.7",
+    "recast": "^0.17.5",
+    "ws": "^6.2.1"
   },
   "license": "MIT",
   "bugs": {

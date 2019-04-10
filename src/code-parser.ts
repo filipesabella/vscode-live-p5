@@ -1,6 +1,6 @@
-import * as recast from 'recast';
-import * as types from 'ast-types';
-const typeBuilders = types.builders;
+const recast = require('recast');
+const types = require('ast-types');
+const typeBuilders = require('ast-types').builders;
 
 // the name of the global that holds all the values in the
 // injected script
