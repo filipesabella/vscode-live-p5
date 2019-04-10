@@ -13,7 +13,6 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.registerTextDocumentContentProvider('live-p5', provider);
 
     vscode.workspace.onDidSaveTextDocument(e => {
-      const text = vscode.window.activeTextEditor.document.getText();
       provider.update(previewUri);
     });
 
