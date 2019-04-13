@@ -1,43 +1,84 @@
 import * as vscode from 'vscode';
-import TextDocumentContentProvider from './TextDocumentContentProvider';
-import WebSocketServer from './WebSocketServer';
 import * as parser from './code-parser';
+import * as path from 'path';
 
-let websocket: WebSocketServer;
+let panel;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const previewUri = vscode.Uri.parse('live-p5://authority/live-p5');
+  const assetsPath = vscode.Uri.file(
+    path.join(context.extensionPath, 'assets')
+  );
 
-  websocket = new WebSocketServer(webSocketServerUrl => {
-    const provider = new TextDocumentContentProvider(webSocketServerUrl);
-    vscode.workspace.registerTextDocumentContentProvider('live-p5', provider);
-
-    vscode.workspace.onDidSaveTextDocument(e => {
-      provider.update(previewUri);
-    });
-
-    vscode.workspace.onDidChangeTextDocument(e => {
+  context.subscriptions.push(
+    vscode.commands.registerCommand('extension.live-p5', () => {
+      // Property 'createWebviewPanel' does not exist on type window :(
+      panel = vscode.window['createWebviewPanel'](
+        'extension.live-p5',
+        'Live p5',
+        vscode.ViewColumn.Two,
+        {
+          enableScripts: true,
+          localResourceRoots: [assetsPath],
+        },
+      );
       const text = vscode.window.activeTextEditor.document.getText();
-      try {
-        if (parser.codeHasChanged(text)) {
-          provider.update(previewUri);
-        } else {
-          websocket.send(JSON.stringify(parser.getVars(text)));
-        }
-      } catch (e) { }
-    });
+      panel.webview.html = createHtml(text, assetsPath);
+    })
+  );
+
+  vscode.workspace.onDidSaveTextDocument(_ => {
+    const text = vscode.window.activeTextEditor.document.getText();
+    panel.webview.html = createHtml(text, assetsPath);
   });
 
+  vscode.workspace.onDidChangeTextDocument(e => {
+    const text = vscode.window.activeTextEditor.document.getText();
 
-  const disposable = vscode.commands.registerCommand('extension.live-p5', () => {
-    vscode.commands
-      .executeCommand('vscode.previewHtml', previewUri, vscode.ViewColumn.Two, 'live-p5')
-      .then(() => { }, vscode.window.showErrorMessage);
+    if (parser.codeHasChanged(text)) {
+      panel.webview.html = createHtml(text, assetsPath);
+    } else {
+      panel.webview.postMessage({
+        vars: JSON.stringify(parser.getVars(text)),
+      });
+    }
   });
+}
 
-  context.subscriptions.push(disposable);
+function createHtml(text: string, assetsPath: vscode.Uri) {
+  const code = parser.parseCode(text);
+
+  const scripts = [
+    'p5.min.js',
+    'p5.dom.min.js',
+    'p5.sound.min.js',
+  ];
+
+  const scriptTags = scripts
+    .map(s =>
+      vscode.Uri.file(path.join(assetsPath.path, s))
+        .with({ scheme: 'vscode-resource' }))
+    .map(uri => `<script src=${uri}></script>`)
+    .join('\b');
+
+  return `<!DOCTYPE html>
+    <html>
+      <head>
+        ${scriptTags}
+        <style>body { padding: 0; margin: 0; }</style>
+      </head>
+      <body></body>
+      <script>${code}</script>
+      <script>
+        window.addEventListener('message', event => {
+          const vars = JSON.parse(event.data.vars);
+          for (k in vars) {
+            __AllVars[k] = vars[k];
+          }
+        });
+      </script>
+    </html>`;
 }
 
 export function deactivate(): void {
-  websocket.dispose();
+  panel = null;
 }

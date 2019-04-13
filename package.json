@@ -23,12 +23,10 @@
   ],
   "main": "./out/src/extension",
   "contributes": {
-    "commands": [
-      {
-        "command": "extension.live-p5",
-        "title": "Open live p5 panel"
-      }
-    ]
+    "commands": [{
+      "command": "extension.live-p5",
+      "title": "Open live p5 panel"
+    }]
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
@@ -42,15 +40,14 @@
     "@types/mocha": "^5.2.6",
     "@types/chai": "^4.1.7",
     "typescript": "^3.4.3",
-    "vscode": "^1.0.0",
+    "vscode": "^1.1.33",
     "ts-node": "^8.0.3",
     "chai": "^4.2.0",
     "mocha": "^6.1.2"
   },
   "dependencies": {
     "npm-check-updates": "^3.1.7",
-    "recast": "^0.17.5",
-    "ws": "^6.2.1"
+    "recast": "^0.17.5"
   },
   "license": "MIT",
   "bugs": {
