@@ -1,8 +1,6 @@
 # live-p5
 
-This extension was based on the good work from [pixelkind](https://github.com/pixelkind/p5canvas).
-
-It provides a live preview panel of your P5 code.
+Provides a live preview panel of your P5 code.
 
 It enables you to change variable values without reloading the P5 rendering, see the gif below:
 
