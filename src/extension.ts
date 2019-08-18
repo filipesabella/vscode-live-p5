@@ -76,7 +76,7 @@ function createHtml(text: string, assetsPath: vscode.Uri) {
           }
         });
       </script>
-    </html>`;
+    </html><!-- ${Math.random()} -->`;
 }
 
 export function deactivate(): void {
