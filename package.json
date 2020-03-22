@@ -46,7 +46,6 @@
     "mocha": "^6.1.2"
   },
   "dependencies": {
-    "npm-check-updates": "^3.1.7",
     "recast": "^0.17.5"
   },
   "license": "MIT",
