@@ -29,6 +29,13 @@ Then create your sketch as a `.ts` file and add the following to it at the top:
 /// <reference path="node_modules/@types/p5/global.d.ts" />
 ```
 
+## Watching documents
+
+If you are using any other means of generating the final js file, the extension
+watches the file that is currently open when you activate the extension.
+
+External modifications to the file trigger the refresh in the live-p5 panel.
+
 ## Caveats
 
 ### When **not** reloading is not a good thing
