@@ -1,5 +1,7 @@
 /// <reference path="../node_modules/@types/p5/global.d.ts" />
 
+import 'aa';
+
 function setup(): void {
   createCanvas(500, 500);
 }
