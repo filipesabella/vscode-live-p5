@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as parser from './code-parser';
 
-let panel;
+let panel: any;
 
 export function activate(context: vscode.ExtensionContext): void {
   const assetsPath = vscode.Uri.file(
