@@ -2,3 +2,4 @@ out
 node_modules
 prototype
 src/test.js
+src/test.ts
