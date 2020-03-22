@@ -9,7 +9,9 @@ const AllVarsVariableName = '__AllVars';
 let previousCode = null;
 
 export function codeHasChanged(userCode: string): boolean {
-  return detectCodeChanges(astFromUserCode(userCode).program.body, previousCode.program.body);
+  return detectCodeChanges(
+    astFromUserCode(userCode).program.body,
+    previousCode.program.body);
 }
 
 /**
@@ -45,7 +47,8 @@ export function parseCode(userCode: string): string {
 
     previousCode = astFromUserCode(userCode);
 
-    return `const ${AllVarsVariableName} = ${JSON.stringify(vars)}; ${modifiedUserCode}`;
+    const jsonVars = JSON.stringify(vars);
+    return `const ${AllVarsVariableName} = ${jsonVars}; ${modifiedUserCode}`;
   } catch (e) {
     return parseCode(recast.prettyPrint(previousCode));
   }
@@ -128,12 +131,13 @@ function detectCodeChanges(actual: any, expected: any): boolean {
   } else if (!actualIsLiteral && !expectedIsLiteral) {
     for (let attr in actual) {
       /**
-       * Sadly there's no other way to compare AST nodes without treating each type specifically,
-       * as there's no common interface.
+       * Sadly there's no other way to compare AST nodes without treating each
+       * type specifically, as there's no common interface.
        *
-       * This code simply iterates through all object properties and compares them. `loc`, however
-       * is a property that nodes have that can differ between `actual` and `expected`, but we don't
-       * necessarily care for this change as it might just be a literal value changing.
+       * This code simply iterates through all object properties and compares
+       * them. `loc`, however is a property that nodes have that can differ
+       * between `actual` and `expected`, but we don't * necessarily care for
+       * this change as it might just be a literal value changing.
        */
       if (expected && attr in expected) {
         if (attr !== 'loc' && detectCodeChanges(actual[attr], expected[attr])) {
