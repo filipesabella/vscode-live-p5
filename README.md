@@ -13,6 +13,22 @@ It enables you to change variable values without reloading the P5 rendering, see
 * When editing literal values, the preview is updated automatically
 * When saving the document, the preview reloads
 
+## Using it with typescript
+
+Rudimentary typescript support has been added.
+
+In order to vscode to typecheck your file, you need to install p5's types:
+
+```
+npm install @types/p5 --save-dev
+```
+
+Then create your sketch as a `.ts` file and add the following to it at the top:
+
+```
+/// <reference path="node_modules/@types/p5/global.d.ts" />
+```
+
 ## Caveats
 
 ### When **not** reloading is not a good thing

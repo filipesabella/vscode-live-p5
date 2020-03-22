@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import * as parser from './code-parser';
 
@@ -21,18 +22,16 @@ export function activate(context: vscode.ExtensionContext): void {
           localResourceRoots: [assetsPath],
         },
       );
-      const text = vscode.window.activeTextEditor.document.getText();
-      panel.webview.html = createHtml(text, assetsPath);
+      panel.webview.html = createHtml(getText(), assetsPath);
     })
   );
 
   vscode.workspace.onDidSaveTextDocument(_ => {
-    const text = vscode.window.activeTextEditor.document.getText();
-    panel.webview.html = createHtml(text, assetsPath);
+    panel.webview.html = createHtml(getText(), assetsPath);
   });
 
   vscode.workspace.onDidChangeTextDocument(e => {
-    const text = vscode.window.activeTextEditor.document.getText();
+    const text = getText();
 
     if (parser.codeHasChanged(text)) {
       panel.webview.html = createHtml(text, assetsPath);
@@ -42,6 +41,21 @@ export function activate(context: vscode.ExtensionContext): void {
       });
     }
   });
+}
+
+function getText(): string {
+  const text = vscode.window.activeTextEditor.document.getText();
+
+  const languageId = vscode.window.activeTextEditor.document.languageId;
+
+  if (languageId === 'typescript') {
+    const result = ts.transpileModule(text, {
+      compilerOptions: { module: ts.ModuleKind.CommonJS }
+    });
+    return result.outputText;
+  }
+
+  return text;
 }
 
 function createHtml(text: string, assetsPath: vscode.Uri) {
