@@ -22,6 +22,12 @@ export function activate(context: vscode.ExtensionContext): void {
           localResourceRoots: [assetsPath],
         },
       );
+
+      const fileName = vscode.window.activeTextEditor.document.fileName;
+      vscode.workspace.createFileSystemWatcher(fileName).onDidChange(_ => {
+        documentChanged(assetsPath);
+      })
+
       panel.webview.html = createHtml(getText(), assetsPath);
     })
   );
@@ -30,17 +36,19 @@ export function activate(context: vscode.ExtensionContext): void {
     panel.webview.html = createHtml(getText(), assetsPath);
   });
 
-  vscode.workspace.onDidChangeTextDocument(e => {
-    const text = getText();
+  vscode.workspace.onDidChangeTextDocument(_ => documentChanged(assetsPath));
+}
 
-    if (parser.codeHasChanged(text)) {
-      panel.webview.html = createHtml(text, assetsPath);
-    } else {
-      panel.webview.postMessage({
-        vars: JSON.stringify(parser.getVars(text)),
-      });
-    }
-  });
+function documentChanged(assetsPath: vscode.Uri): void {
+  const text = getText();
+
+  if (parser.codeHasChanged(text)) {
+    panel.webview.html = createHtml(text, assetsPath);
+  } else {
+    panel.webview.postMessage({
+      vars: JSON.stringify(parser.getVars(text)),
+    });
+  }
 }
 
 function getText(): string {
