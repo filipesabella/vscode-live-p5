@@ -50,7 +50,6 @@ function createHtml(text: string, assetsPath: vscode.Uri) {
   const scripts = [
     'p5.min.js',
     'p5.dom.min.js',
-    'p5.sound.min.js',
   ];
 
   const scriptTags = scripts
