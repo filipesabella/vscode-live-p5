@@ -29,6 +29,10 @@ Then create your sketch as a `.ts` file and add the following to it at the top:
 /// <reference path="node_modules/@types/p5/global.d.ts" />
 ```
 
+### Instanced mode with TS
+
+Follow the steps [here](https://github.com/filipesabella/vscode-live-p5/issues/8).
+
 ## Watching documents
 
 If you are using any other means of generating the final js file, the extension
