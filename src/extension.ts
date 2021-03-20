@@ -77,7 +77,7 @@ function createHtml(text: string, assetsPath: vscode.Uri) {
     .map(s =>
       vscode.Uri.file(path.join(assetsPath.path, s))
         .with({ scheme: 'vscode-resource' }))
-    .map(uri => `<script src=${uri}></script>`)
+    .map(uri => `<script src="${uri}"></script>`)
     .join('\b');
 
   return `<!DOCTYPE html>
