@@ -2,7 +2,7 @@
   "name": "live-p5",
   "displayName": "live-p5",
   "description": "Edit your p5 code live, without reloading",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "author": {
     "name": "filipesabella"
   },
