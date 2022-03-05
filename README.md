@@ -50,7 +50,7 @@ This is a problem when changing literals that are not used in the `draw` loop. F
 
 ### Where do my `console.log`s and runtime errors go?
 
-Because of how the preview panel works in vscode, prints and runtime errors get printed to the developer console.  
+Because of how the preview panel works in vscode, prints and runtime errors get printed to the developer console (menu _Help > Toggle Developer Tools_).  
 
 The original extension by pixelkind does a workaround for print statements, but there's no way around the runtime errors.  
 Because of this I decided to remove the workaround completely and now it is necessary to have the developer console open when working with this extension.
