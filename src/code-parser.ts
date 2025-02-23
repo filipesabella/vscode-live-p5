@@ -29,22 +29,53 @@ export function parseCode(userCode: string): string {
     const vars = {};
     const ast = astFromUserCode(userCode);
 
+    const globalVars = Object.fromEntries(ast.program.body
+      .filter(b => b.type === 'VariableDeclaration')
+      .map(v => ([
+        v.declarations[0].id.name,
+        null,
+      ])));
+
     types.visit(ast, {
-      visitLiteral: (path) => {
+      visitLiteral(path) {
         const key = nodeToKey(path, vars);
         vars[key] = path.value.value;
 
+
+        if (path.parentPath?.value?.type === 'VariableDeclarator') {
+          const variable = path.parentPath.value.id.name;
+          if (path.scope.isGlobal) {
+            const variable = path.parentPath.value.id.name;
+            globalVars[variable] = key;
+          } else if (globalVars[variable]) {
+            globalVars[variable] = key;
+          }
+        }
         path.replace(
           typeBuilders.memberExpression(
             typeBuilders.identifier(AllVarsVariableName),
             typeBuilders.identifier(key)));
 
         return false;
+      },
+      visitIdentifier(path) {
+        const globalVar = globalVars[path.value.name];
+        if (globalVar && !path.scope.isGlobal
+          // try not to break the generated code if the user shadows a global
+          // var within this context
+          && path.parentPath?.value?.type !== 'VariableDeclarator') {
+          path.replace(
+            typeBuilders.memberExpression(
+              typeBuilders.identifier(AllVarsVariableName),
+              typeBuilders.identifier(globalVar)));
+          return false;
+        } else {
+          this.traverse(path);
+        }
       }
     });
 
     const modifiedUserCode = recast.prettyPrint(ast).code;
-
     previousCode = astFromUserCode(userCode);
 
     const jsonVars = JSON.stringify(vars);
@@ -75,6 +106,7 @@ export function getVars(userCode: string): any {
       return false;
     }
   });
+
 
   return vars;
 }

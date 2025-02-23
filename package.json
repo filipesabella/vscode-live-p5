@@ -47,7 +47,7 @@
   },
   "dependencies": {
     "recast": "^0.18.7",
-    "typescript": "^3.8.3"
+    "typescript": "^5.7.3"
   },
   "license": "MIT",
   "bugs": {

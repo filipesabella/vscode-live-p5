@@ -1,9 +1,9 @@
-import 'mocha';
 import { expect } from 'chai';
-import { getVars, codeHasChanged, parseCode } from '../src/code-parser';
+import 'mocha';
+import { codeHasChanged, getVars, parseCode } from '../src/code-parser';
 
 describe('code-parser', () => {
-  xdescribe('getVars', () => {
+  describe('getVars', () => {
     it('hashes variables', () => {
       expect(getVars('let a = 1;')).to.deep.eq({ a1: 1 });
       expect(getVars('const a = 1;')).to.deep.eq({ a1: 1 });
@@ -27,6 +27,43 @@ describe('code-parser', () => {
       expect(getVars('m(1, m(1));')).to.deep.eq({ a1: 1, a1_1: 1 });
     });
   });
+
+  describe('parseCode on globals', () => {
+    it('inlines globals', () => {
+      const code = parseCode(`
+      const ooo = 1;
+      function draw() {
+        const aaa = 2;
+        console.log(ooo, aaa);
+      }`)
+
+      compareCode(code, `
+      const __AllVars = {"a1":1,"a4":2}; const ooo = __AllVars.a1;
+      function draw() {
+        const aaa = __AllVars.a4;
+        console.log(__AllVars.a1, aaa);
+      }`);
+    });
+
+    it('tries not to replace shadowed globals', () => {
+      const code = parseCode(`
+        let ooo = 1;
+        function draw() {
+          let ooo = 2;
+          const aaa = 3;
+          console.log(ooo, aaa);
+        }`)
+
+      compareCode(code, `
+        const __AllVars = {"a1":1,"a4":2,"a5":3};
+        let ooo = __AllVars.a1;
+        function draw() {
+          let ooo = __AllVars.a4;
+          const aaa = __AllVars.a5;
+          console.log(__AllVars.a4, aaa);
+        }`);
+    });
+  })
 
   describe('codeHasChanged', () => {
     it('detects if the code has changed', () => {
@@ -76,3 +113,10 @@ describe('code-parser', () => {
     });
   });
 });
+
+const recast = require('recast');
+function compareCode(actual: string, expected: string) {
+  expect(
+    recast.prettyPrint(recast.parse(actual)).code).to.eq(
+      recast.prettyPrint(recast.parse(expected)).code);
+}

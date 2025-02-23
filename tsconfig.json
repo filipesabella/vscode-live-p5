@@ -5,7 +5,7 @@
     "outDir": "out",
     "resolveJsonModule": true,
     "lib": [
-      "es6"
+      "es2019"
     ],
     "sourceMap": true,
     "rootDir": ".",
@@ -14,5 +14,8 @@
   "exclude": [
     "node_modules",
     ".vscode-test"
+  ],
+  "include": [
+    "./src/**/*.ts"
   ]
 }
