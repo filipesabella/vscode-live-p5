@@ -1,4 +1,4 @@
-import * as path from 'path';
+import * as fs from 'fs';
 import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import * as parser from './code-parser';
@@ -6,9 +6,7 @@ import * as parser from './code-parser';
 let panel: any;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const assetsPath = vscode.Uri.file(
-    path.join(context.extensionPath, 'assets')
-  );
+  const assetsPath = vscode.Uri.joinPath(context.extensionUri, 'assets');
 
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.live-p5', () => {
@@ -37,6 +35,34 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   vscode.workspace.onDidChangeTextDocument(_ => documentChanged(assetsPath));
+
+  const completions = JSON.parse(
+    fs.readFileSync(vscode.Uri.joinPath(assetsPath, 'p5-docs.json').fsPath, 'utf8'))
+    .map((d: any) => {
+      const item = new vscode.CompletionItem(
+        d.name,
+        vscode.CompletionItemKind.Function,
+      );
+      item.detail = 'p5: ' + d.module;
+
+      const link = 'p5js.org/reference/p5/' + d.name;
+      const documentation = new vscode.MarkdownString(
+        `[${link}](https://${link})\n\n${d.description}`
+      );
+      item.documentation = documentation;
+
+      return item;
+    });
+
+  const provider = vscode.languages.registerCompletionItemProvider(
+    ['javascript', 'typescript'],
+    {
+      provideCompletionItems() {
+        return completions;
+      }
+    },
+  );
+  context.subscriptions.push(provider);
 }
 
 function documentChanged(assetsPath: vscode.Uri): void {
@@ -75,8 +101,7 @@ function createHtml(text: string, assetsPath: vscode.Uri) {
 
   const scriptTags = scripts
     .map(s =>
-      vscode.Uri.file(path.join(assetsPath.path, s))
-        .with({ scheme: 'vscode-resource' }))
+      panel.webview.asWebviewUri(vscode.Uri.joinPath(assetsPath, s)))
     .map(uri => `<script src="${uri}"></script>`)
     .join('\b');
 
