@@ -19,6 +19,9 @@
     "Other"
   ],
   "main": "./out/src/extension",
+  "activationEvents": [
+    "onCommand:extension.live-p5"
+  ],
   "contributes": {
     "commands": [
       {
@@ -39,7 +42,7 @@
     "@types/mocha": "^7.0.2",
     "@types/node": "^13.9.3",
     "@types/p5": "^0.9.0",
-    "@types/vscode": "^1.97.0",
+    "@types/vscode": "^1.74.0",
     "chai": "^4.2.0",
     "mocha": "^7.1.1",
     "node-html-markdown": "^1.3.0",
