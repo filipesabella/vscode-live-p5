@@ -24,10 +24,10 @@ export function activate(context: vscode.ExtensionContext): void {
       const fileName = vscode.window.activeTextEditor.document.fileName;
       vscode.workspace.createFileSystemWatcher(fileName).onDidChange(_ => {
         documentChanged(assetsPath);
-      })
+      });
 
       panel.webview.html = createHtml(getText(), assetsPath);
-    })
+    }),
   );
 
   vscode.workspace.onDidSaveTextDocument(_ => {
@@ -37,7 +37,11 @@ export function activate(context: vscode.ExtensionContext): void {
   vscode.workspace.onDidChangeTextDocument(_ => documentChanged(assetsPath));
 
   const completions = JSON.parse(
-    fs.readFileSync(vscode.Uri.joinPath(assetsPath, 'p5-docs.json').fsPath, 'utf8'))
+    fs.readFileSync(
+      vscode.Uri.joinPath(assetsPath, 'p5-docs.json').fsPath,
+      'utf8',
+    ),
+  )
     .map((d: any) => {
       const item = new vscode.CompletionItem(
         d.name,
@@ -47,7 +51,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       const link = 'p5js.org/reference/p5/' + d.name;
       const documentation = new vscode.MarkdownString(
-        `[${link}](https://${link})\n\n${d.description}`
+        `[${link}](https://${link})\n\n${d.description}`,
       );
       item.documentation = documentation;
 
@@ -59,7 +63,7 @@ export function activate(context: vscode.ExtensionContext): void {
     {
       provideCompletionItems() {
         return completions;
-      }
+      },
     },
   );
   context.subscriptions.push(provider);
@@ -90,8 +94,7 @@ function createHtml(text: string, assetsPath: vscode.Uri) {
   ];
 
   const scriptTags = scripts
-    .map(s =>
-      panel.webview.asWebviewUri(vscode.Uri.joinPath(assetsPath, s)))
+    .map(s => panel.webview.asWebviewUri(vscode.Uri.joinPath(assetsPath, s)))
     .map(uri => `<script src="${uri}"></script>`)
     .join('\b');
 

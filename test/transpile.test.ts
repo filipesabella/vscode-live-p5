@@ -1,14 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import {
+  describe,
+  expect,
+  it,
+} from 'vitest';
 import { transpile } from '../src/transpile';
 
 describe('transpile', () => {
   it('strips types from typescript', () => {
-    const code = transpile(`
+    const code = transpile(
+      `
       enum Mode { A, B }
       let size: number = 10;
       function setup(): void {
         createCanvas(size as number, size);
-      }`, 'typescript');
+      }`,
+      'typescript',
+    );
 
     expect(code).not.toMatch(/: number|: void| as number/);
     expect(code).not.toContain('use strict');

@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
-import { codeHasChanged, getVars, parseCode } from '../src/code-parser';
 import * as recast from 'recast';
+import {
+  describe,
+  expect,
+  it,
+} from 'vitest';
+import {
+  codeHasChanged,
+  getVars,
+  parseCode,
+} from '../src/code-parser';
 
 describe('code-parser', () => {
   describe('getVars', () => {
@@ -35,14 +43,17 @@ describe('code-parser', () => {
       function draw() {
         const aaa = 2;
         console.log(ooo, aaa);
-      }`)
+      }`);
 
-      compareCode(code, `
+      compareCode(
+        code,
+        `
       const __AllVars = {"a1":1,"a4":2}; const ooo = __AllVars.a1;
       function draw() {
         const aaa = __AllVars.a4;
         console.log(__AllVars.a1, aaa);
-      }`);
+      }`,
+      );
     });
 
     it('tries not to replace shadowed globals', () => {
@@ -52,18 +63,21 @@ describe('code-parser', () => {
           let ooo = 2;
           const aaa = 3;
           console.log(ooo, aaa);
-        }`)
+        }`);
 
-      compareCode(code, `
+      compareCode(
+        code,
+        `
         const __AllVars = {"a1":1,"a4":2,"a5":3};
         let ooo = __AllVars.a1;
         function draw() {
           let ooo = __AllVars.a4;
           const aaa = __AllVars.a5;
           console.log(__AllVars.a4, aaa);
-        }`);
+        }`,
+      );
     });
-  })
+  });
 
   describe('codeHasChanged', () => {
     it('detects if the code has changed', () => {
@@ -116,6 +130,8 @@ describe('code-parser', () => {
 
 function compareCode(actual: string, expected: string) {
   expect(
-    recast.prettyPrint(recast.parse(actual)).code).toBe(
-      recast.prettyPrint(recast.parse(expected)).code);
+    recast.prettyPrint(recast.parse(actual)).code,
+  ).toBe(
+    recast.prettyPrint(recast.parse(expected)).code,
+  );
 }

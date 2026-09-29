@@ -11,7 +11,8 @@ let previousCode = null;
 export function codeHasChanged(userCode: string): boolean {
   return detectCodeChanges(
     astFromUserCode(userCode).program.body,
-    previousCode.program.body);
+    previousCode.program.body,
+  );
 }
 
 /**
@@ -29,18 +30,19 @@ export function parseCode(userCode: string): string {
     const vars = {};
     const ast = astFromUserCode(userCode);
 
-    const globalVars = Object.fromEntries(ast.program.body
-      .filter(b => b.type === 'VariableDeclaration')
-      .map(v => ([
-        v.declarations[0].id.name,
-        null,
-      ])));
+    const globalVars = Object.fromEntries(
+      ast.program.body
+        .filter(b => b.type === 'VariableDeclaration')
+        .map(v => [
+          v.declarations[0].id.name,
+          null,
+        ]),
+    );
 
     types.visit(ast, {
       visitLiteral(path) {
         const key = nodeToKey(path, vars);
         vars[key] = path.value.value;
-
 
         if (path.parentPath?.value?.type === 'VariableDeclarator') {
           const variable = path.parentPath.value.id.name;
@@ -54,25 +56,31 @@ export function parseCode(userCode: string): string {
         path.replace(
           typeBuilders.memberExpression(
             typeBuilders.identifier(AllVarsVariableName),
-            typeBuilders.identifier(key)));
+            typeBuilders.identifier(key),
+          ),
+        );
 
         return false;
       },
       visitIdentifier(path) {
         const globalVar = globalVars[path.value.name];
-        if (globalVar && !path.scope.isGlobal
+        if (
+          globalVar && !path.scope.isGlobal
           // try not to break the generated code if the user shadows a global
           // var within this context
-          && path.parentPath?.value?.type !== 'VariableDeclarator') {
+          && path.parentPath?.value?.type !== 'VariableDeclarator'
+        ) {
           path.replace(
             typeBuilders.memberExpression(
               typeBuilders.identifier(AllVarsVariableName),
-              typeBuilders.identifier(globalVar)));
+              typeBuilders.identifier(globalVar),
+            ),
+          );
           return false;
         } else {
           this.traverse(path);
         }
-      }
+      },
     });
 
     const modifiedUserCode = recast.prettyPrint(ast).code;
@@ -99,14 +107,13 @@ export function getVars(userCode: string): any {
   const ast = astFromUserCode(userCode);
 
   types.visit(ast, {
-    visitLiteral: (path) => {
+    visitLiteral: path => {
       const key = nodeToKey(path, vars);
       vars[key] = path.value.value;
 
       return false;
-    }
+    },
   });
-
 
   return vars;
 }

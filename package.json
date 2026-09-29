@@ -38,13 +38,15 @@
     "test": "vitest run",
     "test-watch": "vitest",
     "package": "vsce package --no-yarn",
-    "release": "vsce publish --no-yarn"
+    "release": "vsce publish --no-yarn",
+    "fmt": "dprint fmt"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
     "@types/p5": "^1.7.7",
     "@types/vscode": "^1.138.0",
     "@vscode/vsce": "^4.0.0",
+    "dprint": "^0.57.4",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",

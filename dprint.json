@@ -1,0 +1,23 @@
+{
+  "typescript": {
+    "lineWidth": 80,
+    "useTabs": false,
+    "semiColons": "always",
+    "quoteStyle": "alwaysSingle",
+    "jsx.quoteStyle": "preferDouble",
+    "arrowFunction.useParentheses": "preferNone",
+    "typeLiteral.separatorKind": "comma",
+    "jsx.bracketPosition": "sameLine",
+    "jsx.multiLineParens": "never",
+    "importDeclaration.forceMultiLine": "whenMultiple"
+  },
+  "excludes": [
+    "**/node_modules",
+    "out",
+    ".yarn",
+    "assets"
+  ],
+  "plugins": [
+    "npm:@dprint/typescript@0.96.1"
+  ]
+}
