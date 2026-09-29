@@ -1,7 +1,7 @@
 import * as fs from 'fs';
-import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import * as parser from './code-parser';
+import { transpile } from './transpile';
 
 let panel: any;
 
@@ -78,18 +78,8 @@ function documentChanged(assetsPath: vscode.Uri): void {
 }
 
 function getText(): string {
-  const text = vscode.window.activeTextEditor.document.getText();
-
-  const languageId = vscode.window.activeTextEditor.document.languageId;
-
-  if (languageId === 'typescript') {
-    const result = ts.transpileModule(text, {
-      compilerOptions: { module: ts.ModuleKind.CommonJS }
-    });
-    return result.outputText;
-  }
-
-  return text;
+  const document = vscode.window.activeTextEditor.document;
+  return transpile(document.getText(), document.languageId);
 }
 
 function createHtml(text: string, assetsPath: vscode.Uri) {
