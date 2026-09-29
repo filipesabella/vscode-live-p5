@@ -57,24 +57,31 @@ describe('p5Scripts', () => {
 
 describe('removedPreload', () => {
   const sketch = 'let img;\nfunction preload() {}\n';
+  const at = (line: number, column: number) => ({ line, column });
 
   it('finds a preload declaration on p5.js 2', () => {
-    expect(removedPreload(sketch)).toEqual({ start: 18, end: 25 });
-    expect(removedPreload('// @p5 2.0.0\n' + sketch)).toBeDefined();
+    expect(removedPreload(sketch)).toEqual(at(2, 9));
+    expect(removedPreload('// @p5 2.0.0\n' + sketch)).toEqual(at(3, 9));
     expect(removedPreload('// @p5 latest\n' + sketch)).toBeDefined();
-    expect(removedPreload('  async function preload () {}')).toEqual({
-      start: 17,
-      end: 24,
-    });
+    expect(removedPreload('  async function preload () {}')).toEqual(at(1, 17));
   });
 
   it('ignores sketches on p5.js 1', () => {
     expect(removedPreload('// @p5 1.11.13\n' + sketch)).toBeUndefined();
   });
 
-  it('ignores sketches without preload', () => {
+  it('ignores sketches without a preload declaration', () => {
     expect(removedPreload('function setup() { preload(); }'))
       .toBeUndefined();
     expect(removedPreload('// function preload() {}')).toBeUndefined();
+    expect(removedPreload('/*\nfunction preload() {}\n*/')).toBeUndefined();
+    expect(removedPreload('const s = `\nfunction preload() {}\n`;'))
+      .toBeUndefined();
+    expect(removedPreload('function setup() {\n  function preload() {}\n}'))
+      .toBeUndefined();
+  });
+
+  it('throws on code that does not parse', () => {
+    expect(() => removedPreload('function preload() {')).toThrow();
   });
 });

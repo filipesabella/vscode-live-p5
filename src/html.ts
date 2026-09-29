@@ -42,7 +42,7 @@ export function createHtml(
         <style>body { padding: 0; margin: 0; }</style>
       </head>
       <body>
-        <script nonce="${nonce}">${escapeScript(code)}</script>
+        <script nonce="${nonce}">${runSketch(code)}</script>
         <script nonce="${nonce}">
           window.addEventListener('message', event => {
             Object.assign(__AllVars, event.data.vars);
@@ -60,7 +60,7 @@ const forwardConsole = `(() => {
   const vscode = acquireVsCodeApi();
 
   const show = value => {
-    if (typeof value === 'string') return value;
+    if (typeof value !== 'object' || value === null) return String(value);
     if (value instanceof Error) return value.stack || String(value);
     try {
       return JSON.stringify(value) ?? String(value);
@@ -93,15 +93,28 @@ const forwardConsole = `(() => {
     };
   });
 
-  window.addEventListener('error', e => send('error', show(e.error ?? e.message)));
+  // capturing, as a script or image that fails to load fires an error event
+  // on itself, which doesn't bubble up to the window
+  window.addEventListener('error', e => send('error', e instanceof ErrorEvent
+    ? show(e.error ?? e.message)
+    : 'Could not load ' + (e.target.src ?? e.target.outerHTML)), true);
   window.addEventListener('unhandledrejection', e => send('error', show(e.reason)));
 })();`;
 
 /**
- * Stops a literal `</script>` in the user's code from closing the tag early.
+ * Runs the sketch from a blob, so nothing in its code, like a `</script>` in a
+ * string, can end the script tag early or otherwise change how the page
+ * parses.
  */
-function escapeScript(code: string): string {
-  return code.replace(/<\/(script)/gi, '<\\/$1');
+function runSketch(code: string): string {
+  // `<` escaped, as the JSON string sits inside a script tag itself
+  const source = JSON.stringify(code).replace(/</g, '\\u003c');
+  return `(() => {
+    const script = document.createElement('script');
+    script.src = URL.createObjectURL(
+      new Blob([${source}], { type: 'text/javascript' }));
+    document.body.append(script);
+  })();`;
 }
 
 function escapeAttribute(value: string): string {

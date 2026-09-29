@@ -1,9 +1,14 @@
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import docs from '../assets/p5-docs.json';
-import * as parser from './code-parser';
+import p5Docs from '../assets/p5-docs.json';
+import p5v1Docs from '../assets/p5-v1-docs.json';
+import {
+  createParser,
+  getVars,
+} from './code-parser';
 import { createHtml } from './html';
 import {
+  isP5v1,
   lastP5v1,
   p5Scripts,
   p5Version,
@@ -38,20 +43,8 @@ export function activate(context: vscode.ExtensionContext): void {
     diagnostics: vscode.languages.createDiagnosticCollection('live-p5'),
   };
 
-  const completions = docs.map(d => {
-    const item = new vscode.CompletionItem(
-      d.name,
-      vscode.CompletionItemKind.Function,
-    );
-    item.detail = 'p5: ' + d.module;
-
-    const link = 'p5js.org/reference/p5/' + d.name;
-    item.documentation = new vscode.MarkdownString(
-      `[${link}](https://${link})\n\n${d.description}`,
-    );
-
-    return item;
-  });
+  const completions = completionItems(p5Docs);
+  const p5v1Completions = completionItems(p5v1Docs);
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
@@ -66,9 +59,35 @@ export function activate(context: vscode.ExtensionContext): void {
       { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
     ),
     vscode.languages.registerCompletionItemProvider(supportedLanguages, {
-      provideCompletionItems: () => completions,
+      // sketches that pick p5.js 1 get its functions and docs instead
+      provideCompletionItems: document =>
+        isP5v1(p5Version(document.getText()))
+          ? p5v1Completions
+          : completions,
     }),
   );
+}
+
+interface Docs {
+  version: string;
+  docs: { name: string, module: string, description: string }[];
+}
+
+function completionItems({ version, docs }: Docs): vscode.CompletionItem[] {
+  return docs.map(d => {
+    const item = new vscode.CompletionItem(
+      d.name,
+      vscode.CompletionItemKind.Function,
+    );
+    item.detail = `p5 ${version}: ${d.module}`;
+
+    const link = 'p5js.org/reference/p5/' + d.name;
+    item.documentation = new vscode.MarkdownString(
+      `[${link}](https://${link})\n\n${d.description}`,
+    );
+
+    return item;
+  });
 }
 
 function openPreview(services: Services): void {
@@ -129,12 +148,13 @@ function createPreview(
   const baseUri = sketchFolder
     && panel.webview.asWebviewUri(sketchFolder).toString() + '/';
 
+  const parser = createParser();
   let renderedVersion: string | undefined;
 
-  const render = (text: string) => {
-    const version = p5Version(document.getText());
+  const render = ({ raw, code }: Sketch) => {
+    const version = p5Version(raw);
     const html = createHtml({
-      code: parser.parseCode(text),
+      code: parser.parseCode(code),
       scriptUris: p5Scripts(version, bundled),
       cspSource: panel.webview.cspSource,
       nonce: randomUUID(),
@@ -142,37 +162,43 @@ function createPreview(
     });
     // the sketch restarts, so its earlier output no longer applies
     output.clear();
-    if (removedPreload(document.getText())) {
+    if (diagnostics.get(document.uri)?.length) {
       output.warn(`${preloadMessage} See ${compatibilityGuide}`);
     }
     panel.webview.html = html;
     renderedVersion = version;
   };
 
-  const checkPreload = () => {
-    const range = removedPreload(document.getText());
-    diagnostics.set(
-      document.uri,
-      range ? [preloadDiagnostic(document, range)] : [],
-    );
+  // keeps the last warning while the code doesn't parse
+  const checkPreload = ({ code }: Sketch) => {
+    try {
+      const position = removedPreload(code);
+      diagnostics.set(
+        document.uri,
+        position ? [preloadDiagnostic(position)] : [],
+      );
+    } catch {}
   };
 
   // both swallow errors from incomplete code while the user is typing, the
   // preview keeps showing the last version that worked
   const reload = () => {
     try {
-      render(getText(document));
+      const sketch = readSketch(document);
+      checkPreload(sketch);
+      render(sketch);
     } catch {}
   };
 
   const update = () => {
     try {
-      const text = getText(document);
-      const versionChanged = p5Version(document.getText()) !== renderedVersion;
-      if (parser.codeHasChanged(text) || versionChanged) {
-        render(text);
+      const sketch = readSketch(document);
+      checkPreload(sketch);
+      const versionChanged = p5Version(sketch.raw) !== renderedVersion;
+      if (parser.codeHasChanged(sketch.code) || versionChanged) {
+        render(sketch);
       } else {
-        panel.webview.postMessage({ vars: parser.getVars(text) });
+        panel.webview.postMessage({ vars: getVars(sketch.code) });
       }
     } catch {}
   };
@@ -180,18 +206,27 @@ function createPreview(
   const listeners = [
     vscode.workspace.onDidChangeTextDocument(e => {
       if (e.document === document && e.contentChanges.length > 0) {
-        checkPreload();
         update();
       }
     }),
-    vscode.workspace.onDidSaveTextDocument(d => {
-      if (d === document) {
+    // only saving by hand restarts the sketch; with auto save on, every pause
+    // in typing would
+    vscode.workspace.onWillSaveTextDocument(e => {
+      if (
+        e.document === document
+        && e.reason === vscode.TextDocumentSaveReason.Manual
+      ) {
         reload();
       }
     }),
     vscode.workspace.onDidCloseTextDocument(d => {
+      // changing the language mode closes and reopens the same document
       if (d === document) {
-        panel.dispose();
+        setTimeout(() => {
+          if (document.isClosed) {
+            panel.dispose();
+          }
+        });
       }
     }),
   ];
@@ -211,18 +246,17 @@ function createPreview(
   });
 
   output.show(true);
-  checkPreload();
   reload();
 
   return { panel, document };
 }
 
 function preloadDiagnostic(
-  document: vscode.TextDocument,
-  { start, end }: { start: number, end: number },
+  { line, column }: { line: number, column: number },
 ): vscode.Diagnostic {
+  const start = new vscode.Position(line - 1, column);
   const diagnostic = new vscode.Diagnostic(
-    new vscode.Range(document.positionAt(start), document.positionAt(end)),
+    new vscode.Range(start, start.translate(0, 'preload'.length)),
     `${preloadMessage} Load files with \`await\` in \`async function setup()\`, `
       + `or run the sketch on p5.js 1 with a \`// @p5 ${lastP5v1}\` line.`,
     vscode.DiagnosticSeverity.Warning,
@@ -287,8 +321,15 @@ function log(
   }
 }
 
-function getText(document: vscode.TextDocument): string {
-  return transpile(document.getText(), document.languageId);
+interface Sketch {
+  // as typed, and as JavaScript
+  raw: string;
+  code: string;
+}
+
+function readSketch(document: vscode.TextDocument): Sketch {
+  const raw = document.getText();
+  return { raw, code: transpile(raw, document.languageId) };
 }
 
 export function deactivate(): void {

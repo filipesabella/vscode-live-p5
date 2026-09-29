@@ -11,7 +11,7 @@ It enables you to change variable values without reloading the P5 rendering, see
 * Open your javascript p5 code with a `draw` function
 * Type **"live p5"** on the command palette and press enter
 * When editing literal values, the preview is updated automatically
-* When saving the document, the preview reloads
+* When saving the document by hand, the preview reloads (auto save doesn't reload it)
 
 The preview runs p5.js 2.3.4 with p5.sound 0.4.1. p5.js 2 is not fully
 compatible with sketches written for p5.js 1, see the
@@ -28,7 +28,8 @@ function setup() {
 ```
 
 Any published version works, including `latest`. Versions before 2.0 use the
-p5.sound that shipped with them.
+p5.sound that shipped with them, and get completions for p5.js 1.11.13. If the
+version can't be loaded, the **Live p5** output panel says so.
 
 If a sketch running on p5.js 2 declares `preload()`, which p5.js 2 no longer
 calls, the extension marks it with a warning. Its quick fix adds the

@@ -1,16 +1,24 @@
 import * as recast from 'recast';
 import {
+  beforeEach,
   describe,
   expect,
   it,
 } from 'vitest';
 import {
-  codeHasChanged,
+  createParser,
   getVars,
-  parseCode,
+  Parser,
 } from '../src/code-parser';
 
 describe('code-parser', () => {
+  let parseCode: Parser['parseCode'];
+  let codeHasChanged: Parser['codeHasChanged'];
+
+  beforeEach(() => {
+    ({ parseCode, codeHasChanged } = createParser());
+  });
+
   describe('getVars', () => {
     it('hashes variables', () => {
       expect(getVars('let a = 1;')).toEqual({ a1: 1 });
@@ -101,6 +109,16 @@ describe('code-parser', () => {
     it('falls back to the last code that parsed', () => {
       const valid = parseCode('let a = 1;');
       expect(parseCode('let a = ;')).toBe(valid);
+    });
+
+    it('falls back to an empty sketch before any code parsed', () => {
+      expect(parseCode('let a = ;')).toBe(parseCode(''));
+    });
+
+    it('does not fall back to code from another parser', () => {
+      parseCode('let fromAnotherSketch = 1;');
+      expect(createParser().parseCode('let a = ;'))
+        .not.toContain('fromAnotherSketch');
     });
   });
 

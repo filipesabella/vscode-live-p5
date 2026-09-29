@@ -6,92 +6,107 @@ const typeBuilders = require('ast-types').builders;
 // injected script
 const AllVarsVariableName = '__AllVars';
 
-let previousCode = null;
-
-export function codeHasChanged(userCode: string): boolean {
-  return detectCodeChanges(
-    astFromUserCode(userCode).program.body,
-    previousCode.program.body,
-  );
+export interface Parser {
+  parseCode(userCode: string): string;
+  codeHasChanged(userCode: string): boolean;
 }
 
 /**
- * Receives:
- * let a = 1;
- *
- * and returns:
- * const __AllVars = {
- *   aHash: 1
- * }
- * let a = __AllVars['aHash'];
+ * Each preview gets its own parser, as it remembers the last code that parsed
+ * to fall back on while the user's code has syntax errors.
  */
-export function parseCode(userCode: string): string {
-  try {
-    const vars = {};
-    const ast = astFromUserCode(userCode);
+export function createParser(): Parser {
+  let previousCode = null;
 
-    // a Map, so names like `constructor` don't resolve to Object.prototype
-    const globalVars = new Map<string, string | null>(
-      ast.program.body
-        .filter(b => b.type === 'VariableDeclaration')
-        .map(v => [
-          v.declarations[0].id.name,
-          null,
-        ]),
+  function codeHasChanged(userCode: string): boolean {
+    return previousCode === null || detectCodeChanges(
+      astFromUserCode(userCode).program.body,
+      previousCode.program.body,
     );
+  }
 
-    types.visit(ast, {
-      visitLiteral(path) {
-        const key = nodeToKey(path, vars);
-        vars[key] = path.value.value;
+  /**
+   * Receives:
+   * let a = 1;
+   *
+   * and returns:
+   * const __AllVars = {
+   *   aHash: 1
+   * }
+   * let a = __AllVars['aHash'];
+   */
+  function parseCode(userCode: string): string {
+    try {
+      const vars = {};
+      const ast = astFromUserCode(userCode);
 
-        if (path.parentPath?.value?.type === 'VariableDeclarator') {
-          const variable = path.parentPath.value.id.name;
-          if (path.scope.isGlobal) {
+      // a Map, so names like `constructor` don't resolve to Object.prototype
+      const globalVars = new Map<string, string | null>(
+        ast.program.body
+          .filter(b => b.type === 'VariableDeclaration')
+          .map(v => [
+            v.declarations[0].id.name,
+            null,
+          ]),
+      );
+
+      types.visit(ast, {
+        visitLiteral(path) {
+          const key = nodeToKey(path, vars);
+          vars[key] = path.value.value;
+
+          if (path.parentPath?.value?.type === 'VariableDeclarator') {
             const variable = path.parentPath.value.id.name;
-            globalVars.set(variable, key);
-          } else if (globalVars.get(variable)) {
-            globalVars.set(variable, key);
+            if (path.scope.isGlobal) {
+              const variable = path.parentPath.value.id.name;
+              globalVars.set(variable, key);
+            } else if (globalVars.get(variable)) {
+              globalVars.set(variable, key);
+            }
           }
-        }
-        path.replace(
-          typeBuilders.memberExpression(
-            typeBuilders.identifier(AllVarsVariableName),
-            typeBuilders.identifier(key),
-          ),
-        );
-
-        return false;
-      },
-      visitIdentifier(path) {
-        const globalVar = globalVars.get(path.value.name);
-        if (
-          globalVar && !path.scope.isGlobal
-          // try not to break the generated code if the user shadows a global
-          // var within this context
-          && path.parentPath?.value?.type !== 'VariableDeclarator'
-        ) {
           path.replace(
             typeBuilders.memberExpression(
               typeBuilders.identifier(AllVarsVariableName),
-              typeBuilders.identifier(globalVar),
+              typeBuilders.identifier(key),
             ),
           );
+
           return false;
-        } else {
-          this.traverse(path);
-        }
-      },
-    });
+        },
+        visitIdentifier(path) {
+          const globalVar = globalVars.get(path.value.name);
+          if (
+            globalVar && !path.scope.isGlobal
+            // try not to break the generated code if the user shadows a global
+            // var within this context
+            && path.parentPath?.value?.type !== 'VariableDeclarator'
+          ) {
+            path.replace(
+              typeBuilders.memberExpression(
+                typeBuilders.identifier(AllVarsVariableName),
+                typeBuilders.identifier(globalVar),
+              ),
+            );
+            return false;
+          } else {
+            this.traverse(path);
+          }
+        },
+      });
 
-    const modifiedUserCode = recast.prettyPrint(ast).code;
-    previousCode = astFromUserCode(userCode);
+      const modifiedUserCode = recast.prettyPrint(ast).code;
+      previousCode = astFromUserCode(userCode);
 
-    const jsonVars = JSON.stringify(vars);
-    return `const ${AllVarsVariableName} = ${jsonVars}; ${modifiedUserCode}`;
-  } catch (e) {
-    return parseCode(recast.prettyPrint(previousCode).code);
+      const jsonVars = JSON.stringify(vars);
+      return `const ${AllVarsVariableName} = ${jsonVars}; ${modifiedUserCode}`;
+    } catch {
+      return previousCode === null
+        ? parseCode('')
+        : parseCode(recast.prettyPrint(previousCode).code);
+    }
   }
+
+  return { parseCode, codeHasChanged };
 }
 
 /**

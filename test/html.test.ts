@@ -26,11 +26,11 @@ describe('createHtml', () => {
     );
   });
 
-  it('keeps a closing script tag in the code from ending the script', () => {
-    const code = `const s = '</script><script>alert(1)</script>';`;
-    expect(html(code)).toContain(
-      `const s = '<\\/script><script>alert(1)<\\/script>';`,
-    );
+  it('keeps the sketch code from changing how the page parses', () => {
+    const code = `const s = '<!-- <script></script>';`;
+    const page = html(code);
+    expect(page).not.toContain('<!--');
+    expect(page).toContain(JSON.stringify(code).replace(/</g, '\\u003c'));
   });
 
   it('resolves relative paths against the sketch folder', () => {
