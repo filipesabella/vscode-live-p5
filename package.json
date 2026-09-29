@@ -2,7 +2,7 @@
   "name": "live-p5",
   "displayName": "live-p5",
   "description": "Edit your p5 code live, without reloading",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "author": {
     "name": "filipesabella"
   },
@@ -23,6 +23,7 @@
     "out/extension.js",
     "assets/p5.min.js",
     "assets/p5.sound.min.js",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "contributes": {
