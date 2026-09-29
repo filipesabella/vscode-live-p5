@@ -4,3 +4,5 @@ src/**
 tsconfig.json
 image.gif
 test/**
+.yarn/**
+.yarnrc.yml
