@@ -1,11 +1,18 @@
 // sketches commonly load images, fonts, sounds and data from anywhere
 const sketchAssetSources = 'https: http: data: blob:';
 
+export interface HtmlOptions {
+  code: string;
+  scriptUris: string[];
+  cspSource: string;
+  nonce: string;
+  // relative paths in the sketch, like `loadImage('cat.png')`, resolve
+  // against this; unsaved sketches have none
+  baseUri?: string;
+}
+
 export function createHtml(
-  code: string,
-  scriptUris: string[],
-  cspSource: string,
-  nonce: string,
+  { code, scriptUris, cspSource, nonce, baseUri }: HtmlOptions,
 ): string {
   const csp = [
     `default-src 'none'`,
@@ -29,6 +36,8 @@ export function createHtml(
       <head>
         <meta charset="utf-8">
         <meta http-equiv="Content-Security-Policy" content="${csp}">
+        ${baseUri ? `<base href="${escapeAttribute(baseUri)}">` : ''}
+        <script nonce="${nonce}">${forwardConsole}</script>
         ${scriptTags}
         <style>body { padding: 0; margin: 0; }</style>
       </head>
@@ -44,8 +53,57 @@ export function createHtml(
 }
 
 /**
+ * Sends console output and uncaught errors to the extension, which shows them
+ * in an output channel. The console keeps working as usual.
+ */
+const forwardConsole = `(() => {
+  const vscode = acquireVsCodeApi();
+
+  const show = value => {
+    if (typeof value === 'string') return value;
+    if (value instanceof Error) return value.stack || String(value);
+    try {
+      return JSON.stringify(value) ?? String(value);
+    } catch {
+      return String(value);
+    }
+  };
+
+  // drops %c styling, which only makes sense in the dev tools
+  const format = args => {
+    if (typeof args[0] !== 'string' || !args[0].includes('%c')) {
+      return args.map(show).join(' ');
+    }
+    const styles = args[0].split('%c').length - 1;
+    return [args[0].replaceAll('%c', ''), ...args.slice(1 + styles)]
+      .map(show).join(' ');
+  };
+
+  const send = (level, text) => {
+    try {
+      vscode.postMessage({ log: { level, text } });
+    } catch {}
+  };
+
+  ['log', 'info', 'debug', 'warn', 'error'].forEach(level => {
+    const original = console[level].bind(console);
+    console[level] = (...args) => {
+      original(...args);
+      send(level, format(args));
+    };
+  });
+
+  window.addEventListener('error', e => send('error', show(e.error ?? e.message)));
+  window.addEventListener('unhandledrejection', e => send('error', show(e.reason)));
+})();`;
+
+/**
  * Stops a literal `</script>` in the user's code from closing the tag early.
  */
 function escapeScript(code: string): string {
   return code.replace(/<\/(script)/gi, '<\\/$1');
+}
+
+function escapeAttribute(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }

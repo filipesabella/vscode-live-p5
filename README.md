@@ -30,6 +30,19 @@ function setup() {
 Any published version works, including `latest`. Versions before 2.0 use the
 p5.sound that shipped with them.
 
+## Loading files
+
+Images, fonts, sounds, models and data can be loaded with paths relative to the
+sketch, like `loadImage('cat.png')`. Files anywhere in the sketch's workspace
+folder work too, e.g. `loadImage('../shared/cat.png')`. Unsaved sketches can
+only load files from URLs.
+
+## Console output
+
+`console.log`, `console.warn`, `console.error` and uncaught errors show up in
+the **Live p5** output panel, which is cleared each time the sketch reloads.
+They also still go to the developer console (_Help > Toggle Developer Tools_).
+
 ## Using it with typescript
 
 Rudimentary typescript support has been added.
@@ -64,20 +77,6 @@ External modifications to the file trigger the refresh in the live-p5 panel.
 The extension tries its best to only reload P5 when necessary; it does this by analysing if a code change only affected literal values (numbers, booleans, and strings).
 
 This is a problem when changing literals that are not used in the `draw` loop. For instance, if you change a literal that affects how the `setup` function works, P5 will only be reloaded when you save your document.
-
-### Where do my `console.log`s and runtime errors go?
-
-Because of how the preview panel works in vscode, prints and runtime errors get printed to the developer console (menu _Help > Toggle Developer Tools_).  
-
-The original extension by pixelkind does a workaround for print statements, but there's no way around the runtime errors.  
-Because of this I decided to remove the workaround completely and now it is necessary to have the developer console open when working with this extension.
-
-Another caveat is that the preview panel does not implement `console.log` correctly, as it doesn't support multiple arguments. So sadly you must concatecate strings yourself, for example:
-
-```javascript
-console.log(1, 2, 3); // prints [Embedded page] 1
-console.log("1, 2, 3"); // prints [Embedded page] 1, 2, 3
-```
 
 ## How does it work?
 

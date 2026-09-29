@@ -20,6 +20,7 @@ let preview: Preview | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   const assetsPath = vscode.Uri.joinPath(context.extensionUri, 'assets');
+  const output = vscode.window.createOutputChannel('Live p5', { log: true });
 
   const completions = docs.map(d => {
     const item = new vscode.CompletionItem(
@@ -39,15 +40,19 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'extension.live-p5',
-      () => openPreview(assetsPath),
+      () => openPreview(assetsPath, output),
     ),
+    output,
     vscode.languages.registerCompletionItemProvider(supportedLanguages, {
       provideCompletionItems: () => completions,
     }),
   );
 }
 
-function openPreview(assetsPath: vscode.Uri): void {
+function openPreview(
+  assetsPath: vscode.Uri,
+  output: vscode.LogOutputChannel,
+): void {
   const document = vscode.window.activeTextEditor?.document;
 
   if (!document || !supportedLanguages.includes(document.languageId)) {
@@ -63,20 +68,31 @@ function openPreview(assetsPath: vscode.Uri): void {
   }
 
   preview?.panel.dispose();
-  preview = createPreview(document, assetsPath);
+  preview = createPreview(document, assetsPath, output);
 }
 
 function createPreview(
   document: vscode.TextDocument,
   assetsPath: vscode.Uri,
+  output: vscode.LogOutputChannel,
 ): Preview {
+  const sketchFolder = document.isUntitled
+    ? undefined
+    : vscode.Uri.joinPath(document.uri, '..');
+
+  // sketches can load files next to them, or anywhere in their workspace
+  const sketchRoots = [
+    sketchFolder,
+    vscode.workspace.getWorkspaceFolder(document.uri)?.uri,
+  ].filter(uri => uri !== undefined);
+
   const panel = vscode.window.createWebviewPanel(
     'extension.live-p5',
     'Live p5',
     { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
     {
       enableScripts: true,
-      localResourceRoots: [assetsPath],
+      localResourceRoots: [assetsPath, ...sketchRoots],
       // messages sent to a hidden webview are dropped, and a restored one
       // would restart the sketch
       retainContextWhenHidden: true,
@@ -92,16 +108,23 @@ function createPreview(
     sound: bundledUri('p5.sound.min.js'),
   };
 
+  const baseUri = sketchFolder
+    && panel.webview.asWebviewUri(sketchFolder).toString() + '/';
+
   let renderedVersion: string | undefined;
 
   const render = (text: string) => {
     const version = p5Version(document.getText());
-    panel.webview.html = createHtml(
-      parser.parseCode(text),
-      p5Scripts(version, bundled),
-      panel.webview.cspSource,
-      randomUUID(),
-    );
+    const html = createHtml({
+      code: parser.parseCode(text),
+      scriptUris: p5Scripts(version, bundled),
+      cspSource: panel.webview.cspSource,
+      nonce: randomUUID(),
+      baseUri,
+    });
+    // the sketch restarts, so its earlier output no longer applies
+    output.clear();
+    panel.webview.html = html;
     renderedVersion = version;
   };
 
@@ -143,6 +166,12 @@ function createPreview(
     }),
   ];
 
+  panel.webview.onDidReceiveMessage(message => {
+    if (message?.log) {
+      log(output, message.log.level, message.log.text);
+    }
+  });
+
   panel.onDidDispose(() => {
     listeners.forEach(l => l.dispose());
     if (preview?.panel === panel) {
@@ -150,9 +179,25 @@ function createPreview(
     }
   });
 
+  output.show(true);
   reload();
 
   return { panel, document };
+}
+
+function log(
+  output: vscode.LogOutputChannel,
+  level: string,
+  text: string,
+): void {
+  switch (level) {
+    case 'error':
+      return output.error(text);
+    case 'warn':
+      return output.warn(text);
+    default:
+      return output.info(text);
+  }
 }
 
 function getText(document: vscode.TextDocument): string {

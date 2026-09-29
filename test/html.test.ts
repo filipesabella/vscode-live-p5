@@ -6,8 +6,14 @@ import {
 import { createHtml } from '../src/html';
 
 describe('createHtml', () => {
-  const html = (code: string) =>
-    createHtml(code, ['https://assets/p5.min.js'], 'vscode-resource:', 'n0nce');
+  const html = (code: string, baseUri?: string) =>
+    createHtml({
+      code,
+      scriptUris: ['https://assets/p5.min.js'],
+      cspSource: 'vscode-resource:',
+      nonce: 'n0nce',
+      baseUri,
+    });
 
   it('allows only nonced scripts', () => {
     expect(html('')).toContain(`script-src 'nonce-n0nce' 'unsafe-eval' blob:`);
@@ -25,5 +31,19 @@ describe('createHtml', () => {
     expect(html(code)).toContain(
       `const s = '<\\/script><script>alert(1)<\\/script>';`,
     );
+  });
+
+  it('resolves relative paths against the sketch folder', () => {
+    expect(html('', 'https://sketch/"folder/')).toContain(
+      '<base href="https://sketch/&quot;folder/">',
+    );
+    expect(html('')).not.toContain('<base');
+  });
+
+  it('forwards console output before any other script runs', () => {
+    const page = html('');
+    expect(page.indexOf('acquireVsCodeApi')).toBeGreaterThan(-1);
+    expect(page.indexOf('acquireVsCodeApi'))
+      .toBeLessThan(page.indexOf('p5.min.js"'));
   });
 });
