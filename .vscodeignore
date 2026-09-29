@@ -3,3 +3,4 @@ src/**
 .gitignore
 tsconfig.json
 image.gif
+test/**
