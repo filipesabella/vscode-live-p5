@@ -79,6 +79,24 @@ describe('code-parser', () => {
     });
   });
 
+  describe('parseCode on Object.prototype names', () => {
+    it('does not treat them as globals', () => {
+      const code = parseCode(`
+        function setup() {
+          console.log(f().constructor, a.toString());
+        }`);
+
+      compareCode(
+        code,
+        `
+        const __AllVars = {};
+        function setup() {
+          console.log(f().constructor, a.toString());
+        }`,
+      );
+    });
+  });
+
   describe('parseCode on syntax errors', () => {
     it('falls back to the last code that parsed', () => {
       const valid = parseCode('let a = 1;');

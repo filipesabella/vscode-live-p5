@@ -30,7 +30,8 @@ export function parseCode(userCode: string): string {
     const vars = {};
     const ast = astFromUserCode(userCode);
 
-    const globalVars = Object.fromEntries(
+    // a Map, so names like `constructor` don't resolve to Object.prototype
+    const globalVars = new Map<string, string | null>(
       ast.program.body
         .filter(b => b.type === 'VariableDeclaration')
         .map(v => [
@@ -48,9 +49,9 @@ export function parseCode(userCode: string): string {
           const variable = path.parentPath.value.id.name;
           if (path.scope.isGlobal) {
             const variable = path.parentPath.value.id.name;
-            globalVars[variable] = key;
-          } else if (globalVars[variable]) {
-            globalVars[variable] = key;
+            globalVars.set(variable, key);
+          } else if (globalVars.get(variable)) {
+            globalVars.set(variable, key);
           }
         }
         path.replace(
@@ -63,7 +64,7 @@ export function parseCode(userCode: string): string {
         return false;
       },
       visitIdentifier(path) {
-        const globalVar = globalVars[path.value.name];
+        const globalVar = globalVars.get(path.value.name);
         if (
           globalVar && !path.scope.isGlobal
           // try not to break the generated code if the user shadows a global
