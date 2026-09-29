@@ -14,7 +14,10 @@ export function createHtml(
     `font-src ${cspSource} ${sketchAssetSources}`,
     `connect-src ${cspSource} ${sketchAssetSources}`,
     `style-src ${cspSource} 'unsafe-inline'`,
-    `script-src 'nonce-${nonce}'`,
+    // p5.strands compiles shaders with `new Function`, p5.sound loads its
+    // audio worklets and worker from blob URLs
+    `script-src 'nonce-${nonce}' 'unsafe-eval' blob:`,
+    `worker-src blob:`,
   ].join('; ');
 
   const scriptTags = scriptUris
@@ -24,6 +27,7 @@ export function createHtml(
   return `<!DOCTYPE html>
     <html>
       <head>
+        <meta charset="utf-8">
         <meta http-equiv="Content-Security-Policy" content="${csp}">
         ${scriptTags}
         <style>body { padding: 0; margin: 0; }</style>

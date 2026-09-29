@@ -13,20 +13,24 @@ It enables you to change variable values without reloading the P5 rendering, see
 * When editing literal values, the preview is updated automatically
 * When saving the document, the preview reloads
 
+The preview runs p5.js 2.3.4 with p5.sound 0.4.1. p5.js 2 is not fully
+compatible with sketches written for p5.js 1, see the
+[compatibility guide](https://github.com/processing/p5.js-compatibility).
+
 ## Using it with typescript
 
 Rudimentary typescript support has been added.
 
-In order to vscode to typecheck your file, you need to install p5's types:
+In order to vscode to typecheck your file, you need to install p5, which ships its types:
 
 ```
-npm install @types/p5 --save-dev
+npm install p5 --save-dev
 ```
 
 Then create your sketch as a `.ts` file and add the following to it at the top:
 
 ```
-/// <reference path="node_modules/@types/p5/global.d.ts" />
+/// <reference path="node_modules/p5/types/global.d.ts" />
 ```
 
 ### Instanced mode with TS

@@ -79,7 +79,8 @@ function createPreview(
     },
   );
 
-  const scriptUris = [vscode.Uri.joinPath(assetsPath, 'p5.min.js')]
+  const scriptUris = ['p5.min.js', 'p5.sound.min.js']
+    .map(s => vscode.Uri.joinPath(assetsPath, s))
     .map(uri => panel.webview.asWebviewUri(uri).toString());
 
   const render = (text: string) => {

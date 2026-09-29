@@ -22,6 +22,7 @@
   "files": [
     "out/extension.js",
     "assets/p5.min.js",
+    "assets/p5.sound.min.js",
     "LICENSE"
   ],
   "contributes": {
@@ -40,15 +41,16 @@
     "package": "vsce package --no-yarn",
     "release": "vsce publish --no-yarn",
     "fmt": "dprint fmt",
-    "check": "tsc -p ./ && dprint check"
+    "check": "tsc -p ./ && dprint check",
+    "update-p5": "node scripts/update-p5.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
-    "@types/p5": "^1.7.7",
     "@types/vscode": "^1.138.0",
     "@vscode/vsce": "^4.0.0",
     "dprint": "^0.57.4",
     "esbuild": "^0.28.2",
+    "node-html-markdown": "^2.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"

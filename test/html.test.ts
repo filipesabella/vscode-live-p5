@@ -10,7 +10,7 @@ describe('createHtml', () => {
     createHtml(code, ['https://assets/p5.min.js'], 'vscode-resource:', 'n0nce');
 
   it('allows only nonced scripts', () => {
-    expect(html('')).toContain(`script-src 'nonce-n0nce'`);
+    expect(html('')).toContain(`script-src 'nonce-n0nce' 'unsafe-eval' blob:`);
     expect(html('').match(/<script(?! nonce="n0nce")/g)).toBeNull();
   });
 
