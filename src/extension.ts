@@ -4,12 +4,24 @@ import docs from '../assets/p5-docs.json';
 import * as parser from './code-parser';
 import { createHtml } from './html';
 import {
+  lastP5v1,
   p5Scripts,
   p5Version,
+  removedPreload,
 } from './p5-version';
 import { transpile } from './transpile';
 
 const supportedLanguages = ['javascript', 'typescript'];
+
+const compatibilityGuide = 'https://github.com/processing/p5.js-compatibility';
+const preloadMessage =
+  'preload() was removed in p5.js 2, the preview never calls it.';
+
+interface Services {
+  assetsPath: vscode.Uri;
+  output: vscode.LogOutputChannel;
+  diagnostics: vscode.DiagnosticCollection;
+}
 
 interface Preview {
   panel: vscode.WebviewPanel;
@@ -20,7 +32,11 @@ let preview: Preview | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   const assetsPath = vscode.Uri.joinPath(context.extensionUri, 'assets');
-  const output = vscode.window.createOutputChannel('Live p5', { log: true });
+  const services: Services = {
+    assetsPath,
+    output: vscode.window.createOutputChannel('Live p5', { log: true }),
+    diagnostics: vscode.languages.createDiagnosticCollection('live-p5'),
+  };
 
   const completions = docs.map(d => {
     const item = new vscode.CompletionItem(
@@ -40,19 +56,22 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'extension.live-p5',
-      () => openPreview(assetsPath, output),
+      () => openPreview(services),
     ),
-    output,
+    services.output,
+    services.diagnostics,
+    vscode.languages.registerCodeActionsProvider(
+      supportedLanguages,
+      { provideCodeActions: preloadFixes },
+      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
+    ),
     vscode.languages.registerCompletionItemProvider(supportedLanguages, {
       provideCompletionItems: () => completions,
     }),
   );
 }
 
-function openPreview(
-  assetsPath: vscode.Uri,
-  output: vscode.LogOutputChannel,
-): void {
+function openPreview(services: Services): void {
   const document = vscode.window.activeTextEditor?.document;
 
   if (!document || !supportedLanguages.includes(document.languageId)) {
@@ -68,13 +87,12 @@ function openPreview(
   }
 
   preview?.panel.dispose();
-  preview = createPreview(document, assetsPath, output);
+  preview = createPreview(document, services);
 }
 
 function createPreview(
   document: vscode.TextDocument,
-  assetsPath: vscode.Uri,
-  output: vscode.LogOutputChannel,
+  { assetsPath, output, diagnostics }: Services,
 ): Preview {
   const sketchFolder = document.isUntitled
     ? undefined
@@ -124,8 +142,19 @@ function createPreview(
     });
     // the sketch restarts, so its earlier output no longer applies
     output.clear();
+    if (removedPreload(document.getText())) {
+      output.warn(`${preloadMessage} See ${compatibilityGuide}`);
+    }
     panel.webview.html = html;
     renderedVersion = version;
+  };
+
+  const checkPreload = () => {
+    const range = removedPreload(document.getText());
+    diagnostics.set(
+      document.uri,
+      range ? [preloadDiagnostic(document, range)] : [],
+    );
   };
 
   // both swallow errors from incomplete code while the user is typing, the
@@ -151,6 +180,7 @@ function createPreview(
   const listeners = [
     vscode.workspace.onDidChangeTextDocument(e => {
       if (e.document === document && e.contentChanges.length > 0) {
+        checkPreload();
         update();
       }
     }),
@@ -174,15 +204,72 @@ function createPreview(
 
   panel.onDidDispose(() => {
     listeners.forEach(l => l.dispose());
+    diagnostics.delete(document.uri);
     if (preview?.panel === panel) {
       preview = undefined;
     }
   });
 
   output.show(true);
+  checkPreload();
   reload();
 
   return { panel, document };
+}
+
+function preloadDiagnostic(
+  document: vscode.TextDocument,
+  { start, end }: { start: number, end: number },
+): vscode.Diagnostic {
+  const diagnostic = new vscode.Diagnostic(
+    new vscode.Range(document.positionAt(start), document.positionAt(end)),
+    `${preloadMessage} Load files with \`await\` in \`async function setup()\`, `
+      + `or run the sketch on p5.js 1 with a \`// @p5 ${lastP5v1}\` line.`,
+    vscode.DiagnosticSeverity.Warning,
+  );
+  diagnostic.source = 'Live p5';
+  diagnostic.code = {
+    value: 'preload',
+    target: vscode.Uri.parse(compatibilityGuide),
+  };
+  return diagnostic;
+}
+
+function preloadFixes(
+  document: vscode.TextDocument,
+  _range: vscode.Range,
+  { diagnostics }: vscode.CodeActionContext,
+): vscode.CodeAction[] {
+  const diagnostic = diagnostics.find(d => d.source === 'Live p5');
+  if (!diagnostic) {
+    return [];
+  }
+
+  const useP5v1 = new vscode.CodeAction(
+    `Run this sketch with p5.js ${lastP5v1}`,
+    vscode.CodeActionKind.QuickFix,
+  );
+  useP5v1.diagnostics = [diagnostic];
+  useP5v1.isPreferred = true;
+  useP5v1.edit = new vscode.WorkspaceEdit();
+  useP5v1.edit.insert(
+    document.uri,
+    new vscode.Position(0, 0),
+    `// @p5 ${lastP5v1}\n`,
+  );
+
+  const openGuide = new vscode.CodeAction(
+    'Open the p5.js 2 compatibility guide',
+    vscode.CodeActionKind.QuickFix,
+  );
+  openGuide.diagnostics = [diagnostic];
+  openGuide.command = {
+    title: openGuide.title,
+    command: 'vscode.open',
+    arguments: [vscode.Uri.parse(compatibilityGuide)],
+  };
+
+  return [useP5v1, openGuide];
 }
 
 function log(

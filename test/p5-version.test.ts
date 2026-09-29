@@ -6,6 +6,7 @@ import {
 import {
   p5Scripts,
   p5Version,
+  removedPreload,
 } from '../src/p5-version';
 
 const bundled = { p5: 'bundled/p5.min.js', sound: 'bundled/p5.sound.min.js' };
@@ -51,5 +52,29 @@ describe('p5Scripts', () => {
       cdn + 'p5@latest/lib/p5.min.js',
       bundled.sound,
     ]);
+  });
+});
+
+describe('removedPreload', () => {
+  const sketch = 'let img;\nfunction preload() {}\n';
+
+  it('finds a preload declaration on p5.js 2', () => {
+    expect(removedPreload(sketch)).toEqual({ start: 18, end: 25 });
+    expect(removedPreload('// @p5 2.0.0\n' + sketch)).toBeDefined();
+    expect(removedPreload('// @p5 latest\n' + sketch)).toBeDefined();
+    expect(removedPreload('  async function preload () {}')).toEqual({
+      start: 17,
+      end: 24,
+    });
+  });
+
+  it('ignores sketches on p5.js 1', () => {
+    expect(removedPreload('// @p5 1.11.13\n' + sketch)).toBeUndefined();
+  });
+
+  it('ignores sketches without preload', () => {
+    expect(removedPreload('function setup() { preload(); }'))
+      .toBeUndefined();
+    expect(removedPreload('// function preload() {}')).toBeUndefined();
   });
 });

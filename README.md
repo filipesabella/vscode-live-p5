@@ -30,6 +30,10 @@ function setup() {
 Any published version works, including `latest`. Versions before 2.0 use the
 p5.sound that shipped with them.
 
+If a sketch running on p5.js 2 declares `preload()`, which p5.js 2 no longer
+calls, the extension marks it with a warning. Its quick fix adds the
+`// @p5 1.11.13` line for you.
+
 ## Loading files
 
 Images, fonts, sounds, models and data can be loaded with paths relative to the
