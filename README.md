@@ -17,6 +17,19 @@ The preview runs p5.js 2.3.4 with p5.sound 0.4.1. p5.js 2 is not fully
 compatible with sketches written for p5.js 1, see the
 [compatibility guide](https://github.com/processing/p5.js-compatibility).
 
+To use a different p5.js version, add a `// @p5 <version>` line to the sketch.
+The preview then loads that version from [jsDelivr](https://www.jsdelivr.com/package/npm/p5):
+
+```js
+// @p5 1.11.13
+function setup() {
+  createCanvas(400, 400);
+}
+```
+
+Any published version works, including `latest`. Versions before 2.0 use the
+p5.sound that shipped with them.
+
 ## Using it with typescript
 
 Rudimentary typescript support has been added.

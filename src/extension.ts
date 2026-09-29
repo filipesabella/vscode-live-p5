@@ -3,6 +3,10 @@ import * as vscode from 'vscode';
 import docs from '../assets/p5-docs.json';
 import * as parser from './code-parser';
 import { createHtml } from './html';
+import {
+  p5Scripts,
+  p5Version,
+} from './p5-version';
 import { transpile } from './transpile';
 
 const supportedLanguages = ['javascript', 'typescript'];
@@ -79,17 +83,26 @@ function createPreview(
     },
   );
 
-  const scriptUris = ['p5.min.js', 'p5.sound.min.js']
-    .map(s => vscode.Uri.joinPath(assetsPath, s))
-    .map(uri => panel.webview.asWebviewUri(uri).toString());
+  const bundledUri = (file: string) =>
+    panel.webview.asWebviewUri(vscode.Uri.joinPath(assetsPath, file))
+      .toString();
+
+  const bundled = {
+    p5: bundledUri('p5.min.js'),
+    sound: bundledUri('p5.sound.min.js'),
+  };
+
+  let renderedVersion: string | undefined;
 
   const render = (text: string) => {
+    const version = p5Version(document.getText());
     panel.webview.html = createHtml(
       parser.parseCode(text),
-      scriptUris,
+      p5Scripts(version, bundled),
       panel.webview.cspSource,
       randomUUID(),
     );
+    renderedVersion = version;
   };
 
   // both swallow errors from incomplete code while the user is typing, the
@@ -103,7 +116,8 @@ function createPreview(
   const update = () => {
     try {
       const text = getText(document);
-      if (parser.codeHasChanged(text)) {
+      const versionChanged = p5Version(document.getText()) !== renderedVersion;
+      if (parser.codeHasChanged(text) || versionChanged) {
         render(text);
       } else {
         panel.webview.postMessage({ vars: parser.getVars(text) });
