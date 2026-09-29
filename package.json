@@ -39,7 +39,8 @@
     "test-watch": "vitest",
     "package": "vsce package --no-yarn",
     "release": "vsce publish --no-yarn",
-    "fmt": "dprint fmt"
+    "fmt": "dprint fmt",
+    "check": "tsc -p ./ && dprint check"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
