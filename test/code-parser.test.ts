@@ -79,6 +79,13 @@ describe('code-parser', () => {
     });
   });
 
+  describe('parseCode on syntax errors', () => {
+    it('falls back to the last code that parsed', () => {
+      const valid = parseCode('let a = 1;');
+      expect(parseCode('let a = ;')).toBe(valid);
+    });
+  });
+
   describe('codeHasChanged', () => {
     it('detects if the code has changed', () => {
       parseCode(`

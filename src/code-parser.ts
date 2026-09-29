@@ -89,7 +89,7 @@ export function parseCode(userCode: string): string {
     const jsonVars = JSON.stringify(vars);
     return `const ${AllVarsVariableName} = ${jsonVars}; ${modifiedUserCode}`;
   } catch (e) {
-    return parseCode(recast.prettyPrint(previousCode));
+    return parseCode(recast.prettyPrint(previousCode).code);
   }
 }
 

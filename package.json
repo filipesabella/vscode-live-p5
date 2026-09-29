@@ -21,7 +21,7 @@
   "main": "./out/extension.js",
   "files": [
     "out/extension.js",
-    "assets",
+    "assets/p5.min.js",
     "LICENSE"
   ],
   "contributes": {
