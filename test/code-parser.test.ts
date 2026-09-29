@@ -1,30 +1,30 @@
-import { expect } from 'chai';
-import 'mocha';
+import { describe, expect, it } from 'vitest';
 import { codeHasChanged, getVars, parseCode } from '../src/code-parser';
+import * as recast from 'recast';
 
 describe('code-parser', () => {
   describe('getVars', () => {
     it('hashes variables', () => {
-      expect(getVars('let a = 1;')).to.deep.eq({ a1: 1 });
-      expect(getVars('const a = 1;')).to.deep.eq({ a1: 1 });
-      expect(getVars('const a = 1; const b = 1;')).to.deep.eq({ a1: 1, a2: 1 });
-      expect(getVars('const a = 1;\nconst b = 1;')).to.deep.eq({ a1: 1, a2: 1 });
+      expect(getVars('let a = 1;')).toEqual({ a1: 1 });
+      expect(getVars('const a = 1;')).toEqual({ a1: 1 });
+      expect(getVars('const a = 1; const b = 1;')).toEqual({ a1: 1, a2: 1 });
+      expect(getVars('const a = 1;\nconst b = 1;')).toEqual({ a1: 1, a2: 1 });
 
       // illegal but lets handle it
-      expect(getVars('const a = 1;const a = 1;')).to.deep.eq({ a1: 1, a2: 1 });
-      expect(getVars('const a = 1;\nconst a = 1;')).to.deep.eq({ a1: 1, a2: 1 });
+      expect(getVars('const a = 1;const a = 1;')).toEqual({ a1: 1, a2: 1 });
+      expect(getVars('const a = 1;\nconst a = 1;')).toEqual({ a1: 1, a2: 1 });
     });
 
     it('hashes simple method calls', () => {
-      expect(getVars('m(1);')).to.deep.eq({ a1: 1 });
-      expect(getVars('m(1, 1);')).to.deep.eq({ a1: 1, a1_1: 1 });
-      expect(getVars('m(1,\n1);')).to.deep.eq({ a1: 1, a1_1: 1 });
-      expect(getVars('m(1,\n\t\t1);')).to.deep.eq({ a1: 1, a1_1: 1 });
+      expect(getVars('m(1);')).toEqual({ a1: 1 });
+      expect(getVars('m(1, 1);')).toEqual({ a1: 1, a1_1: 1 });
+      expect(getVars('m(1,\n1);')).toEqual({ a1: 1, a1_1: 1 });
+      expect(getVars('m(1,\n\t\t1);')).toEqual({ a1: 1, a1_1: 1 });
     });
 
     it('hashes nested method calls', () => {
-      expect(getVars('m(1, m2(1));')).to.deep.eq({ a1: 1, a1_1: 1 });
-      expect(getVars('m(1, m(1));')).to.deep.eq({ a1: 1, a1_1: 1 });
+      expect(getVars('m(1, m2(1));')).toEqual({ a1: 1, a1_1: 1 });
+      expect(getVars('m(1, m(1));')).toEqual({ a1: 1, a1_1: 1 });
     });
   });
 
@@ -72,21 +72,21 @@ describe('code-parser', () => {
       `);
       expect(codeHasChanged(`
         let a = 1;
-      `)).to.be.false;
+      `)).toBe(false);
 
       parseCode(`
         let a = 1;
       `);
       expect(codeHasChanged(`
         let b = 1;
-      `)).to.be.true;
+      `)).toBe(true);
 
       parseCode(`
         console.log('a');
         `);
       expect(codeHasChanged(`
         console.log('a', 'b');
-      `)).to.be.true;
+      `)).toBe(true);
     });
 
     it('ignores formatting changes', () => {
@@ -98,7 +98,7 @@ describe('code-parser', () => {
         let a = 1;
 
              console.log(a);
-      `)).to.be.false;
+      `)).toBe(false);
     });
 
     it('ignores literal value changes', () => {
@@ -109,14 +109,13 @@ describe('code-parser', () => {
       expect(codeHasChanged(`
         let a = 11;
         console.log('b');
-      `)).to.be.false;
+      `)).toBe(false);
     });
   });
 });
 
-const recast = require('recast');
 function compareCode(actual: string, expected: string) {
   expect(
-    recast.prettyPrint(recast.parse(actual)).code).to.eq(
+    recast.prettyPrint(recast.parse(actual)).code).toBe(
       recast.prettyPrint(recast.parse(expected)).code);
 }

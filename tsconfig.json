@@ -9,7 +9,9 @@
     ],
     "sourceMap": true,
     "rootDir": ".",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "strict": false,
+    "types": ["node"]
   },
   "exclude": [
     "node_modules",
