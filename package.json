@@ -18,11 +18,10 @@
   "categories": [
     "Other"
   ],
-  "main": "./out/src/extension",
+  "main": "./out/extension.js",
   "files": [
-    "out/src/**/*.js",
+    "out/extension.js",
     "assets",
-    "node_modules",
     "LICENSE"
   ],
   "contributes": {
@@ -34,8 +33,8 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
-    "compile": "tsc -watch -p ./",
+    "vscode:prepublish": "tsc -p ./ && esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --outfile=out/extension.js --minify",
+    "compile": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --outfile=out/extension.js --sourcemap --watch",
     "test": "vitest run",
     "test-watch": "vitest",
     "package": "vsce package --no-yarn",
@@ -46,6 +45,7 @@
     "@types/p5": "^1.7.7",
     "@types/vscode": "^1.138.0",
     "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"
