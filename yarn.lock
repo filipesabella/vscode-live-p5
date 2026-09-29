@@ -197,7 +197,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/vscode@npm:^1.74.0":
+"@types/vscode@npm:^1.138.0":
   version: 1.138.0
   resolution: "@types/vscode@npm:1.138.0"
   checksum: 10c0/75bbfbfcc522dbb29e956abdc0b94523578fefe90cba444313337c3bd1a1f211e43e9f9bcfc5e6442ba5e1d955fafa7af5d81509419f7818e6f4a24c76ed0c5a
@@ -493,7 +493,7 @@ __metadata:
   dependencies:
     "@types/node": "npm:^26.6.3"
     "@types/p5": "npm:^1.7.7"
-    "@types/vscode": "npm:^1.74.0"
+    "@types/vscode": "npm:^1.138.0"
     recast: "npm:^0.24.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.3.1"
